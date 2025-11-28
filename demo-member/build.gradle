@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':demo-core')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.security:spring-security-crypto'
+}
+
+tasks.named('jar') {
+    enabled = true
+}

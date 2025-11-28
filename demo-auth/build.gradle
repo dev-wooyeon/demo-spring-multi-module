@@ -1,0 +1,11 @@
+dependencies {
+    implementation project(':demo-core')
+    implementation project(':demo-member')
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.security:spring-security-crypto'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+}
+
+tasks.named('jar') {
+    enabled = true
+}
