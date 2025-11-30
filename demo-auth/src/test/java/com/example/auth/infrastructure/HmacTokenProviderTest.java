@@ -11,6 +11,7 @@ import com.example.core.domain.DomainException;
 import com.example.core.time.TimeProvider;
 import java.time.Instant;
 import java.util.Set;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class HmacTokenProviderTest {
@@ -21,6 +22,7 @@ class HmacTokenProviderTest {
     private final HmacTokenProvider provider = new HmacTokenProvider(properties, timeProvider);
 
     @Test
+    @DisplayName("토큰을 생성하고 검증하면 동일한 페이로드를 얻는다")
     void create_and_verify_round_trip() {
         TokenPayload payload = new TokenPayload(
                 1L,
@@ -41,6 +43,7 @@ class HmacTokenProviderTest {
     }
 
     @Test
+    @DisplayName("만료된 토큰은 검증에 실패한다")
     void verify_fails_when_expired() {
         TokenPayload payload = new TokenPayload(
                 1L,
@@ -56,5 +59,25 @@ class HmacTokenProviderTest {
         assertThatThrownBy(() -> provider.verify(token))
                 .isInstanceOf(DomainException.class)
                 .matches(ex -> ((DomainException) ex).errorCode() == AuthErrorCode.TOKEN_EXPIRED);
+    }
+
+    @Test
+    @DisplayName("시그니처가 다르면 토큰을 거절한다")
+    void verify_fails_when_signature_mismatch() {
+        TokenPayload payload = new TokenPayload(
+                2L,
+                "tamper@demo.com",
+                Set.of("ADMIN", "USER"),
+                FIXED_NOW,
+                FIXED_NOW.plusSeconds(30),
+                TokenType.ACCESS
+        );
+
+        String token = provider.create(payload);
+        String tampered = token + "a";
+
+        assertThatThrownBy(() -> provider.verify(tampered))
+                .isInstanceOf(DomainException.class)
+                .matches(ex -> ((DomainException) ex).errorCode() == AuthErrorCode.INVALID_TOKEN);
     }
 }

@@ -12,6 +12,7 @@ import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
@@ -55,11 +56,14 @@ public class HmacTokenProvider implements TokenProvider {
     }
 
     private String encodePayload(TokenPayload payload) {
+        String roles = payload.roles().stream()
+                .sorted()
+                .collect(Collectors.joining(","));
         String raw = String.join("|",
                 payload.type().name(),
                 String.valueOf(payload.memberId()),
                 payload.email(),
-                String.join(",", payload.roles()),
+                roles,
                 String.valueOf(payload.issuedAt().getEpochSecond()),
                 String.valueOf(payload.expiresAt().getEpochSecond()));
         return Base64.getUrlEncoder()
@@ -77,7 +81,9 @@ public class HmacTokenProvider implements TokenProvider {
             TokenType type = TokenType.valueOf(parts[0]);
             Long memberId = Long.valueOf(parts[1]);
             String email = parts[2];
-            Set<String> roles = Set.of(parts[3].split(","));
+            Set<String> roles = parts[3].isBlank()
+                    ? Set.of()
+                    : Set.of(parts[3].split(","));
             Instant issuedAt = Instant.ofEpochSecond(Long.parseLong(parts[4]));
             Instant expiresAt = Instant.ofEpochSecond(Long.parseLong(parts[5]));
             return new TokenPayload(memberId, email, roles, issuedAt, expiresAt, type);

@@ -24,4 +24,15 @@ public record MemberResponse(
                 summary.lastLoginAt()
         );
     }
+
+    public static MemberResponse from(com.example.member.domain.Member member) {
+        return new MemberResponse(
+                member.getId(),
+                member.getEmail().getValue(),
+                member.getName(),
+                member.getStatus(),
+                member.getRoles(),
+                member.getLastLoginAt()
+        );
+    }
 }

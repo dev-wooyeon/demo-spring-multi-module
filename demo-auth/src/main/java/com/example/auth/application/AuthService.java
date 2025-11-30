@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -45,13 +46,12 @@ public class AuthService {
         this.timeProvider = timeProvider;
     }
 
+    @Transactional
     public AuthTokens login(LoginCommand command) {
         Member member = memberRepository.findByEmail(new Email(command.email()))
                 .orElseThrow(() -> new DomainException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        if (member.getStatus() == MemberStatus.LOCKED) {
-            throw new DomainException(MemberErrorCode.MEMBER_LOCKED);
-        }
+        ensureActive(member);
 
         if (!passwordHasher.matches(command.rawPassword(), member.getPasswordHash())) {
             throw new DomainException(AuthErrorCode.INVALID_CREDENTIAL);
@@ -71,6 +71,7 @@ public class AuthService {
         return new AuthTokens(accessToken, refreshToken, accessPayload.expiresAt());
     }
 
+    @Transactional
     public AuthTokens refresh(RefreshCommand command) {
         TokenPayload payload = tokenProvider.verify(command.refreshToken());
         if (payload.type() != TokenType.REFRESH) {
@@ -81,6 +82,8 @@ public class AuthService {
 
         Member member = memberRepository.findById(stored.memberId())
                 .orElseThrow(() -> new DomainException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        ensureActive(member);
 
         Instant now = timeProvider.now();
         TokenPayload newAccessPayload = buildPayload(member, TokenType.ACCESS, now, properties.getAccessTtl().toSeconds());
@@ -93,6 +96,15 @@ public class AuthService {
         refreshTokenStore.remove(command.refreshToken());
 
         return new AuthTokens(accessToken, refreshToken, newAccessPayload.expiresAt());
+    }
+
+    private void ensureActive(Member member) {
+        if (member.getStatus() == MemberStatus.LOCKED) {
+            throw new DomainException(MemberErrorCode.MEMBER_LOCKED);
+        }
+        if (member.getStatus() != MemberStatus.ACTIVE) {
+            throw new DomainException(MemberErrorCode.MEMBER_INACTIVE);
+        }
     }
 
     private TokenPayload buildPayload(Member member, TokenType type, Instant issuedAt, long ttlSeconds) {

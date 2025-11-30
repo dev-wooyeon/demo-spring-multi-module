@@ -1,4 +1,4 @@
-package com.example.api;
+package com.example;
 
 import com.example.auth.application.AuthProperties;
 import com.example.core.time.SystemTimeProvider;

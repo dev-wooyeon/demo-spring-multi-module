@@ -7,6 +7,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    packages-to-scan: com.example
     properties:
       hibernate:
         format_sql: true
